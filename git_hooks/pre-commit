@@ -1,0 +1,23 @@
+#!/bin/sh
+
+###############################################################################
+# This script belongs in the .git/hooks/ directory of your DEVELOPMENT server #
+###############################################################################
+
+# The WordPress root directory
+_dir=$(dirname $(dirname $(dirname `realpath $0`)))"/"
+_php=`which php`
+
+# Path to the wp-deploy.php script
+# If your WordPress installation root is not the root of your
+# git repository, you will need to update this path.
+deploy_path="${_dir}wp-deploy.php"
+
+# Export the database that will be committed to git
+if [ -f ${deploy_path} ]; then
+        echo "Exporting the WordPress database..."
+        eval "${_php} ${deploy_path} exportdb"
+else
+        echo "deploy file ${deploy_path} not found."
+        exit 1;
+fi
