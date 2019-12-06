@@ -2,21 +2,24 @@
 /*
  * Only allow this script to be run by command line
  */
-if(PHP_SAPI !== 'cli' || isset($_SERVER['HTTP_USER_AGENT'])) {
+if (PHP_SAPI !== 'cli' || isset($_SERVER['HTTP_USER_AGENT'])) {
     header("HTTP/1.0 404 Not Found");
     die();
 }
 
 /*
-The hostname for your production WordPress installation
+The scheme + hostname for your production WordPress installation
 
 Whatever scheme + hostname is in the database exported by mysqldump will be
 replaced with the hostname defined here.
 */
-$productionSchemeHostname = 'http://WPDeploy.test';
+$productionSchemeHostname = 'http://wpdeploy.dev';
 
 /*
-The scheme + hostname for your dev/staging/local WordPress installation
+The scheme + hostname for your dev/staging/local WordPress installation.
+
+This value only has an effect on the development server where it's triggered
+by the pre-commit hook. It doesn't matter what this value is on your production server.
 */
 $devSchemeHostname = 'http://testwp.test';
 
@@ -56,13 +59,17 @@ class WPDeploy
     public static function exportDB(string $productionHostname, string $devSchemeHostname)
     {
         self::init();
-        $DB_HOST     = DB_HOST;
-        $DB_NAME     = DB_NAME;
-        $DB_PASSWORD = DB_PASSWORD;
-        $DB_USER     = DB_USER;
-        exec("MYSQL_PWD=$DB_PASSWORD mysqldump -h $DB_HOST -u $DB_USER $DB_NAME > wp-deploy.sql");
+        global $wpdb;
+        $DB_HOST         = DB_HOST;
+        $DB_NAME         = DB_NAME;
+        $DB_PASSWORD     = DB_PASSWORD;
+        $DB_USER         = DB_USER;
+        $DB_TABLE_PREFIX = $wpdb->prefix;
+        # Only export tables with the specified WordPress table prefix
+        $cmd = "MYSQL_PWD=$DB_PASSWORD mysqldump -h $DB_HOST -u $DB_USER $DB_NAME $(MYSQL_PWD=$DB_PASSWORD mysql -h $DB_HOST -u $DB_USER $DB_NAME -Bse \"show tables like '$DB_TABLE_PREFIX%'\") > wp-deploy.sql";
+        exec($cmd);
         e("Database exported.");
-        exec("sed \"s/".str_replace('/','\/',$devSchemeHostname)."/".str_replace('/','\/',$productionHostname)."/g\" wp-deploy.sql > wp-deploy_prod.sql");
+        exec("sed \"s/" . str_replace('/', '\/', $devSchemeHostname) . "/" . str_replace('/', '\/', $productionHostname) . "/g\" wp-deploy.sql > wp-deploy_prod.sql");
         exec("rm wp-deploy.sql");
         exec("mv wp-deploy_prod.sql wp-deploy.sql");
         e("Replaced [$devSchemeHostname] with [$productionHostname].");

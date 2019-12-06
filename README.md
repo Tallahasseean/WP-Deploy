@@ -6,7 +6,7 @@ I've worked with WordPress for many years and I've always wanted a tool that wou
 
 This system uses 2 git hooks and a small PHP script to do this.
 
-The pre-commit hook on the development server triggers the PHP script to run mysqldump, using the values defined in `wp-config.php`, then `sed` is used to replace the development URL scheme and hostname with the production equivalents. After the URL replacement, the sql file is added to the commit.
+The pre-commit hook on the development server triggers the PHP script to run `mysqldump`, using the values defined in `wp-config.php`, then `sed` is used to replace the development URL scheme and hostname with the production equivalents. After the URL replacement, the sql file is added to the commit. The `mysqldump` command uses the table prefix specified in the WordPress config file to export only WordPress tables, leaving any other tables in your project untouched.
 
 The post-merge hook on the production server imports the committed mysql dump, then deletes the dump file.
 
